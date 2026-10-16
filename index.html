@@ -272,30 +272,43 @@
       </div>
 
       <!-- Large Tactile Phone Buttons -->
-      <div class="grid grid-cols-5 gap-2">
-        <button id="btnMoveLeft" type="button" class="arcade-btn col-span-1 py-3.5 rounded-xl bg-slate-800 active:bg-cyan-600 border border-slate-700 text-white font-black text-lg flex flex-col items-center justify-center shadow-md" aria-label="Move Left">
+      <div class="grid grid-cols-5 gap-1.5">
+        <button id="btnMoveLeft" type="button" class="arcade-btn col-span-1 py-2.5 rounded-xl bg-slate-800 active:bg-cyan-600 border border-slate-700 text-white font-black text-lg flex flex-col items-center justify-center shadow-md" aria-label="Move Left">
           <span>◀</span>
           <span class="text-[9px] font-bold text-slate-400 uppercase mt-0.5">Left</span>
         </button>
 
-        <button id="btnMoveRight" type="button" class="arcade-btn col-span-1 py-3.5 rounded-xl bg-slate-800 active:bg-cyan-600 border border-slate-700 text-white font-black text-lg flex flex-col items-center justify-center shadow-md" aria-label="Move Right">
+        <button id="btnMoveRight" type="button" class="arcade-btn col-span-1 py-2.5 rounded-xl bg-slate-800 active:bg-cyan-600 border border-slate-700 text-white font-black text-lg flex flex-col items-center justify-center shadow-md" aria-label="Move Right">
           <span>▶</span>
           <span class="text-[9px] font-bold text-slate-400 uppercase mt-0.5">Right</span>
         </button>
 
-        <button id="btnRotate" type="button" class="arcade-btn col-span-1 py-3.5 rounded-xl bg-sky-600/90 active:bg-sky-500 border border-sky-400/50 text-white font-black text-lg flex flex-col items-center justify-center shadow-md" aria-label="Rotate Piece">
+        <button id="btnRotate" type="button" class="arcade-btn col-span-1 py-2.5 rounded-xl bg-sky-600/90 active:bg-sky-500 border border-sky-400/50 text-white font-black text-lg flex flex-col items-center justify-center shadow-md" aria-label="Rotate Piece">
           <span>↻</span>
           <span class="text-[9px] font-bold text-sky-100 uppercase mt-0.5">Rotate</span>
         </button>
 
-        <button id="btnSoftDrop" type="button" class="arcade-btn col-span-1 py-3.5 rounded-xl bg-slate-800 active:bg-slate-700 border border-slate-700 text-cyan-300 font-black text-lg flex flex-col items-center justify-center shadow-md" aria-label="Soft Nudge in Gravity Direction">
+        <button id="btnSoftDrop" type="button" class="arcade-btn col-span-1 py-2.5 rounded-xl bg-slate-800 active:bg-slate-700 border border-slate-700 text-cyan-300 font-black text-lg flex flex-col items-center justify-center shadow-md" aria-label="Soft Nudge in Gravity Direction">
           <span id="softDropGlyph">▾</span>
           <span class="text-[9px] font-bold text-slate-400 uppercase mt-0.5">Step</span>
         </button>
 
-        <button id="btnHardDrop" type="button" class="arcade-btn col-span-1 py-3.5 rounded-xl bg-amber-500 active:bg-amber-400 border border-amber-300/60 text-slate-950 font-black text-lg flex flex-col items-center justify-center shadow-md" aria-label="Instant Drop">
+        <button id="btnHardDrop" type="button" class="arcade-btn col-span-1 py-2.5 rounded-xl bg-amber-500 active:bg-amber-400 border border-amber-300/60 text-slate-950 font-black text-lg flex flex-col items-center justify-center shadow-md" aria-label="Instant Drop">
           <span id="hardDropGlyph">⏬</span>
           <span class="text-[9px] font-extrabold text-slate-900 uppercase mt-0.5">Drop</span>
+        </button>
+      </div>
+
+      <!-- Dedicated Mobile Bottom Bar: ZOOM DOWN & PAUSE -->
+      <div class="grid grid-cols-3 gap-2 pt-0.5">
+        <button id="btnZoomDown" type="button" class="arcade-btn col-span-2 py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-400 via-sky-400 to-amber-400 active:from-cyan-300 active:to-amber-300 border border-cyan-200/80 text-slate-950 font-black text-sm tracking-wide flex items-center justify-center gap-2 shadow-lg shadow-cyan-950/60" aria-label="Zoom Down Fast">
+          <span id="zoomDownGlyph" class="text-base leading-none">⏬</span>
+          <span id="zoomDownLabel" class="font-extrabold uppercase tracking-wider">ZOOM DOWN</span>
+        </button>
+
+        <button id="btnBottomPause" type="button" class="arcade-btn col-span-1 py-3 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 active:bg-rose-500/40 border border-rose-400/50 text-rose-200 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md" aria-label="Pause Game">
+          <span id="bottomPauseGlyph">⏸</span>
+          <span id="bottomPauseText">PAUSE</span>
         </button>
       </div>
     </section>
@@ -1233,6 +1246,10 @@
 
         softDropGlyph.textContent = isUp ? '▴' : '▾';
         hardDropGlyph.textContent = isUp ? '⏫' : '⏬';
+        const zoomGlyphEl = document.getElementById('zoomDownGlyph');
+        if (zoomGlyphEl) {
+          zoomGlyphEl.textContent = isUp ? '⏫' : '⏬';
+        }
       }
 
       function updateBestScoreUI() {
@@ -1542,6 +1559,8 @@
         saveScoreBox.classList.add('hidden');
         scoreSavedConfirm.classList.add('hidden');
         pauseBtnText.textContent = '⏸';
+        document.getElementById('bottomPauseGlyph').textContent = '⏸';
+        document.getElementById('bottomPauseText').textContent = 'PAUSE';
 
         updateModeTabStyles();
         updateGravityThemeUI();
@@ -1595,9 +1614,13 @@
           btnOverlayPrimary.textContent = 'RESUME GAME';
           boardOverlay.classList.remove('hidden');
           pauseBtnText.textContent = '▶';
+          document.getElementById('bottomPauseGlyph').textContent = '▶';
+          document.getElementById('bottomPauseText').textContent = 'RESUME';
         } else {
           boardOverlay.classList.add('hidden');
           pauseBtnText.textContent = '⏸';
+          document.getElementById('bottomPauseGlyph').textContent = '⏸';
+          document.getElementById('bottomPauseText').textContent = 'PAUSE';
           lastTime = performance.now();
         }
       }
@@ -1664,6 +1687,65 @@
         if (e.cancelable) e.preventDefault();
         ensureAudio();
         hardDrop();
+      });
+
+      // Zoom Down button: turbo-zooms the piece down at high speed while held, or slams on quick tap
+      (function () {
+        const zoomBtn = document.getElementById('btnZoomDown');
+        let zoomTimer = null;
+        let zoomTicks = 0;
+
+        function stopZoom() {
+          if (zoomTimer) {
+            clearInterval(zoomTimer);
+            zoomTimer = null;
+          }
+          zoomBtn.classList.remove('is-pressed');
+        }
+
+        zoomBtn.addEventListener('pointerdown', function (e) {
+          if (e.cancelable) e.preventDefault();
+          ensureAudio();
+          stopZoom();
+          zoomBtn.classList.add('is-pressed');
+          zoomTicks = 0;
+          // Immediate 2-cell turbo zoom step + trail particle
+          if (activePiece && !isPaused && !isGameOver) {
+            spawnBlockParticles(activePiece);
+            stepGravity(true);
+            if (!collides(board, activePiece, 0, gravityDir, activePiece.matrix)) {
+              stepGravity(true);
+            }
+            drawAll();
+          }
+          zoomTimer = setInterval(function () {
+            zoomTicks++;
+            if (activePiece && !isPaused && !isGameOver) {
+              spawnBlockParticles(activePiece);
+              stepGravity(true);
+              drawAll();
+            } else {
+              stopZoom();
+            }
+          }, 26);
+        });
+
+        zoomBtn.addEventListener('pointerup', function () {
+          if (zoomTimer && zoomTicks === 0 && activePiece && !isPaused && !isGameOver) {
+            // Quick tap zooms straight to the bottom
+            stopZoom();
+            hardDrop();
+            return;
+          }
+          stopZoom();
+        });
+        zoomBtn.addEventListener('pointerleave', stopZoom);
+        zoomBtn.addEventListener('pointercancel', stopZoom);
+      })();
+
+      document.getElementById('btnBottomPause').addEventListener('click', function () {
+        ensureAudio();
+        togglePause();
       });
 
       document.getElementById('btnGravityFlip').addEventListener('click', function () {
