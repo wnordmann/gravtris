@@ -1,0 +1,2086 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="GravTris" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#090d16" />
+  <title>GravTris — Shifting Gravity Block Puzzle</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-deep: #090d16;
+      --bg-panel: #111827;
+      --bg-card: #1e293b;
+      --accent-cyan: #06b6d4;
+      --accent-amber: #f59e0b;
+      --accent-purple: #a855f7;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      background-color: var(--bg-deep);
+      color: #f8fafc;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow-x: hidden;
+      touch-action: manipulation;
+    }
+    .font-mono-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    .canvas-glow-down {
+      box-shadow: 0 0 28px -4px rgba(6, 182, 212, 0.35), inset 0 -10px 24px -10px rgba(6, 182, 212, 0.3);
+      border-color: rgba(6, 182, 212, 0.55);
+    }
+    .canvas-glow-up {
+      box-shadow: 0 0 28px -4px rgba(245, 158, 11, 0.4), inset 0 10px 24px -10px rgba(245, 158, 11, 0.35);
+      border-color: rgba(245, 158, 11, 0.65);
+    }
+    .arcade-btn {
+      transition: transform 0.06s ease, background-color 0.12s ease, box-shadow 0.12s ease;
+      touch-action: none;
+    }
+    .arcade-btn:active, .arcade-btn.is-pressed {
+      transform: translateY(2px) scale(0.96);
+    }
+    /* Custom scrollbar for modals */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+  </style>
+<link rel="manifest" href="./manifest.json" />
+  <link rel="apple-touch-icon" href="./icon.svg" />
+</head>
+<body class="bg-[#090d16] text-slate-100 flex flex-col items-center justify-start min-h-screen">
+
+  <!-- App Container -->
+  <div class="w-full max-w-md mx-auto px-3 py-2.5 flex flex-col gap-2.5 min-h-screen justify-between">
+
+    <!-- Top Navigation & Status Header -->
+    <header class="flex items-center justify-between bg-slate-900/90 border border-slate-800/90 rounded-2xl px-3 py-2 shadow-lg">
+      <div class="flex items-center gap-2">
+        <div id="gravityBadgeIcon" class="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-400/40 flex items-center justify-center text-cyan-300 font-bold text-lg shadow-inner transition-all duration-300" title="Current Gravity Direction">
+          <span id="gravityArrowGlyph">⬇</span>
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <h1 class="text-base font-extrabold tracking-tight bg-gradient-to-r from-cyan-300 via-sky-200 to-amber-300 bg-clip-text text-transparent">GRAVTRIS</h1>
+            <span id="gravityStatePill" class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+              FLOOR ↓
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-none mt-0.5" id="modeSubtitleText">Flux Cycle • Auto-Flip every 5 blocks</p>
+        </div>
+      </div>
+
+      <!-- Quick Utility Buttons -->
+      <div class="flex items-center gap-1.5">
+        <button id="btnOpenScores" type="button" class="arcade-btn px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 flex items-center gap-1 text-xs font-semibold" title="High Scores & Stats">
+          <span>🏆</span>
+          <span class="hidden xs:inline" id="headerBestScore">0</span>
+        </button>
+        <button id="btnOpenInstall" type="button" class="arcade-btn p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-semibold" title="Install on iPhone / Android">
+          📱
+        </button>
+        <button id="btnToggleMute" type="button" class="arcade-btn p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold" title="Toggle Sound Effects">
+          <span id="muteIcon">🔊</span>
+        </button>
+        <button id="btnPauseToggle" type="button" class="arcade-btn px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold" title="Pause / Resume Game">
+          <span id="pauseBtnText">⏸</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Gravity Mode Selector Pills -->
+    <div class="grid grid-cols-3 gap-1.5 bg-slate-900/80 p-1 rounded-xl border border-slate-800/80">
+      <button type="button" data-mode="flux" class="mode-tab-btn py-1.5 px-2 rounded-lg text-xs font-bold transition-all bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+        ⇅ Flux Auto-Flip
+      </button>
+      <button type="button" data-mode="surge" class="mode-tab-btn py-1.5 px-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 border border-transparent">
+        ⚡ Avalanche Flip
+      </button>
+      <button type="button" data-mode="tactical" class="mode-tab-btn py-1.5 px-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 border border-transparent">
+        🎯 Tactical Manual
+      </button>
+    </div>
+
+    <!-- Main HUD + Board Area -->
+    <main class="flex items-stretch gap-2.5 justify-center flex-1 min-h-0">
+
+      <!-- Left Column: Hold, Score, Gravity Meter -->
+      <aside class="w-24 flex flex-col justify-between gap-2 shrink-0">
+        <!-- Hold Piece Box -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-2 flex flex-col items-center">
+          <div class="w-full flex items-center justify-between mb-1">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Hold</span>
+            <span class="text-[9px] text-slate-500 font-mono">C / Tap</span>
+          </div>
+          <canvas id="holdCanvas" width="72" height="56" class="rounded-lg bg-slate-950/80 border border-slate-800/70 cursor-pointer" title="Tap to Hold / Swap Piece"></canvas>
+        </div>
+
+        <!-- Score & Stats Stack -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-2.5 flex flex-col gap-2 flex-1 justify-center">
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Score</div>
+            <div id="scoreValue" class="font-mono-num text-base font-extrabold text-white leading-tight truncate">0</div>
+          </div>
+          <div class="border-t border-slate-800/80 pt-1.5">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-amber-400/90">Device Best</div>
+            <div id="bestScoreValue" class="font-mono-num text-sm font-bold text-amber-300 leading-tight truncate">0</div>
+          </div>
+          <div class="grid grid-cols-2 gap-1 border-t border-slate-800/80 pt-1.5">
+            <div>
+              <div class="text-[9px] font-bold uppercase text-slate-400">Lines</div>
+              <div id="linesValue" class="font-mono-num text-xs font-bold text-slate-200">0</div>
+            </div>
+            <div>
+              <div class="text-[9px] font-bold uppercase text-slate-400">Level</div>
+              <div id="levelValue" class="font-mono-num text-xs font-bold text-cyan-300">1</div>
+            </div>
+          </div>
+          <div class="border-t border-slate-800/80 pt-1.5">
+            <div class="flex items-center justify-between text-[9px] font-bold uppercase text-slate-400 mb-1">
+              <span id="shiftMeterLabel">Next Flip</span>
+              <span id="shiftCountdownText" class="font-mono-num text-cyan-300">5</span>
+            </div>
+            <div class="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+              <div id="shiftProgressBar" class="h-full bg-gradient-to-r from-cyan-400 to-amber-400 transition-all duration-300" style="width: 20%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Manual Gravity Shift Button -->
+        <button id="btnGravityFlip" type="button" class="arcade-btn w-full py-2.5 px-2 rounded-2xl bg-gradient-to-br from-purple-600/90 to-indigo-700/90 hover:from-purple-500 hover:to-indigo-600 border border-purple-400/50 shadow-lg shadow-purple-950/50 flex flex-col items-center justify-center gap-0.5 text-white">
+          <div class="flex items-center gap-1 text-xs font-extrabold tracking-wide">
+            <span>⇅</span>
+            <span>FLIP NOW</span>
+          </div>
+          <span id="flipChargeBadge" class="text-[10px] font-semibold text-purple-200">Ready (1x)</span>
+        </button>
+      </aside>
+
+      <!-- Center: Playfield Canvas Wrapper -->
+      <div class="relative flex-1 flex items-center justify-center min-h-[340px]">
+        <div id="boardFrame" class="relative rounded-2xl border-2 p-1 bg-slate-950 canvas-glow-down transition-all duration-500 flex items-center justify-center">
+          <!-- Top / Bottom Gravity Well Indicators -->
+          <div id="ceilingWellBar" class="absolute top-1 left-2 right-2 h-1 rounded-full bg-amber-400/0 transition-all duration-300 pointer-events-none"></div>
+          <div id="floorWellBar" class="absolute bottom-1 left-2 right-2 h-1 rounded-full bg-cyan-400/80 transition-all duration-300 pointer-events-none"></div>
+
+          <canvas id="gameCanvas" width="240" height="480" class="block rounded-xl bg-[#070b12] touch-none"></canvas>
+
+          <!-- Floating Gravity Shift Toast Banner -->
+          <div id="gravityBanner" class="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900/95 border border-amber-400/60 text-amber-300 font-extrabold text-xs tracking-wider uppercase shadow-2xl opacity-0 scale-90 transition-all duration-200 whitespace-nowrap z-10">
+            ⇅ Gravity Inverted!
+          </div>
+
+          <!-- Start / Pause / Game Over Overlay inside Board -->
+          <div id="boardOverlay" class="absolute inset-0 bg-slate-950/88 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center p-4 text-center z-20 hidden">
+            <div id="overlayBadge" class="text-xs font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 mb-2">
+              Shifting Gravity
+            </div>
+            <h2 id="overlayTitle" class="text-xl font-black text-white mb-1">GAME PAUSED</h2>
+            <p id="overlayDesc" class="text-xs text-slate-300 mb-3 max-w-[200px]">
+              Slide finger or use arrows to move back &amp; forth. Watch the gravity arrow!
+            </p>
+
+            <!-- New High Score Initials Box (shown on Game Over when score > 0) -->
+            <div id="saveScoreBox" class="w-full max-w-[210px] bg-slate-900/95 border border-amber-500/40 rounded-xl p-2.5 mb-3 hidden">
+              <div id="newRecordLabel" class="text-[11px] font-extrabold text-amber-300 uppercase tracking-wider mb-1">
+                🎉 Save Score to Device
+              </div>
+              <div class="flex items-center gap-1.5">
+                <input id="playerNameInput" type="text" maxlength="10" placeholder="Your Name" value="PLAYER 1" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs font-bold text-white uppercase focus:outline-none focus:border-cyan-400" />
+                <button id="btnSaveScore" type="button" class="arcade-btn px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shrink-0">
+                  Save
+                </button>
+              </div>
+              <p id="scoreSavedConfirm" class="text-[10px] text-emerald-400 font-semibold mt-1 hidden">✓ Saved to device storage!</p>
+            </div>
+
+            <div class="flex flex-col gap-2 w-full max-w-[190px]">
+              <button id="btnOverlayPrimary" type="button" class="arcade-btn w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-500 hover:from-cyan-400 hover:to-sky-400 text-slate-950 font-extrabold text-xs tracking-wide shadow-lg shadow-cyan-950/60">
+                RESUME GAME
+              </button>
+              <button id="btnOverlayRestart" type="button" class="arcade-btn w-full py-2 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700">
+                ↻ Restart Fresh
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Next Queue & Touch Tip -->
+      <aside class="w-20 flex flex-col justify-between gap-2 shrink-0">
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-2 flex flex-col items-center">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Next</span>
+          <canvas id="nextCanvas" width="64" height="168" class="rounded-lg bg-slate-950/80 border border-slate-800/70"></canvas>
+        </div>
+
+        <!-- Gravity Legend & Combo Card -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-2 flex flex-col gap-1.5 text-center flex-1 justify-center">
+          <div class="text-[10px] font-bold uppercase text-slate-400">Gravity</div>
+          <div id="sideGravityIndicator" class="py-1.5 px-1 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-extrabold text-xs">
+            ⬇ DOWN
+          </div>
+          <div class="text-[10px] text-slate-400 leading-tight mt-1">
+            Shifts: <span id="shiftsCountValue" class="font-mono-num font-bold text-slate-200">0</span>
+          </div>
+          <div id="comboPill" class="text-[10px] font-extrabold text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded-lg py-0.5 px-1 opacity-40">
+            1x Multi
+          </div>
+        </div>
+
+        <!-- Quick Hold Button for Thumb -->
+        <button id="btnHoldPiece" type="button" class="arcade-btn w-full py-2.5 px-1.5 rounded-2xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs flex flex-col items-center justify-center gap-0.5">
+          <span>📦</span>
+          <span class="text-[10px]">HOLD</span>
+        </button>
+      </aside>
+    </main>
+
+    <!-- Touch Slide / Scrub Bar + Basic Back-and-Forth Controls -->
+    <section class="bg-slate-900/95 border border-slate-800/90 rounded-2xl p-2.5 shadow-xl flex flex-col gap-2">
+      <!-- Interactive Touch Slide Track for Effortless Back & Forth Movement -->
+      <div id="touchSlideTrack" class="relative w-full h-9 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between px-3 cursor-ew-resize touch-none overflow-hidden" title="Slide your finger back and forth here or directly on the board">
+        <div id="touchSlideThumb" class="pointer-events-none absolute top-1 bottom-1 w-10 rounded-lg bg-cyan-500/25 border border-cyan-400/60 transition-transform duration-75" style="left: calc(50% - 20px);"></div>
+        <span class="text-[11px] font-bold text-slate-400 pointer-events-none">◀ SLIDE BACK &amp; FORTH</span>
+        <span class="text-[10px] font-semibold text-cyan-300/90 pointer-events-none">DRAG OR TAP BOARD</span>
+        <span class="text-[11px] font-bold text-slate-400 pointer-events-none">SLIDE ▶</span>
+      </div>
+
+      <!-- Large Tactile Phone Buttons -->
+      <div class="grid grid-cols-5 gap-2">
+        <button id="btnMoveLeft" type="button" class="arcade-btn col-span-1 py-3.5 rounded-xl bg-slate-800 active:bg-cyan-600 border border-slate-700 text-white font-black text-lg flex flex-col items-center justify-center shadow-md" aria-label="Move Left">
+          <span>◀</span>
+          <span class="text-[9px] font-bold text-slate-400 uppercase mt-0.5">Left</span>
+        </button>
+
+        <button id="btnMoveRight" type="button" class="arcade-btn col-span-1 py-3.5 rounded-xl bg-slate-800 active:bg-cyan-600 border border-slate-700 text-white font-black text-lg flex flex-col items-center justify-center shadow-md" aria-label="Move Right">
+          <span>▶</span>
+          <span class="text-[9px] font-bold text-slate-400 uppercase mt-0.5">Right</span>
+        </button>
+
+        <button id="btnRotate" type="button" class="arcade-btn col-span-1 py-3.5 rounded-xl bg-sky-600/90 active:bg-sky-500 border border-sky-400/50 text-white font-black text-lg flex flex-col items-center justify-center shadow-md" aria-label="Rotate Piece">
+          <span>↻</span>
+          <span class="text-[9px] font-bold text-sky-100 uppercase mt-0.5">Rotate</span>
+        </button>
+
+        <button id="btnSoftDrop" type="button" class="arcade-btn col-span-1 py-3.5 rounded-xl bg-slate-800 active:bg-slate-700 border border-slate-700 text-cyan-300 font-black text-lg flex flex-col items-center justify-center shadow-md" aria-label="Soft Nudge in Gravity Direction">
+          <span id="softDropGlyph">▾</span>
+          <span class="text-[9px] font-bold text-slate-400 uppercase mt-0.5">Step</span>
+        </button>
+
+        <button id="btnHardDrop" type="button" class="arcade-btn col-span-1 py-3.5 rounded-xl bg-amber-500 active:bg-amber-400 border border-amber-300/60 text-slate-950 font-black text-lg flex flex-col items-center justify-center shadow-md" aria-label="Instant Drop">
+          <span id="hardDropGlyph">⏬</span>
+          <span class="text-[9px] font-extrabold text-slate-900 uppercase mt-0.5">Drop</span>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <!-- High Scores & On-Device Storage Modal -->
+  <div id="scoresModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-slate-900 border border-slate-700/90 rounded-2xl w-full max-w-md p-4 shadow-2xl flex flex-col gap-3 max-h-[90vh]">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🏆</span>
+          <div>
+            <h2 class="text-base font-extrabold text-white">On-Device High Scores</h2>
+            <p class="text-[11px] text-emerald-400 font-medium" id="storageStatusText">✓ Saved locally on your phone (Offline-Ready)</p>
+          </div>
+        </div>
+        <button id="btnCloseScores" type="button" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold">✕</button>
+      </div>
+
+      <!-- Lifetime Device Stats Summary -->
+      <div class="grid grid-cols-4 gap-2 bg-slate-950/90 p-2.5 rounded-xl border border-slate-800 text-center">
+        <div>
+          <div class="text-[10px] text-slate-400 uppercase font-bold">Games</div>
+          <div id="statGamesPlayed" class="font-mono-num text-sm font-extrabold text-white">0</div>
+        </div>
+        <div>
+          <div class="text-[10px] text-slate-400 uppercase font-bold">All-Time</div>
+          <div id="statAllTimeBest" class="font-mono-num text-sm font-extrabold text-amber-300">0</div>
+        </div>
+        <div>
+          <div class="text-[10px] text-slate-400 uppercase font-bold">Lines</div>
+          <div id="statTotalLines" class="font-mono-num text-sm font-extrabold text-cyan-300">0</div>
+        </div>
+        <div>
+          <div class="text-[10px] text-slate-400 uppercase font-bold">Flips</div>
+          <div id="statTotalShifts" class="font-mono-num text-sm font-extrabold text-purple-300">0</div>
+        </div>
+      </div>
+
+      <!-- Mode Filter Pills for Leaderboard -->
+      <div class="flex items-center gap-1.5 text-xs">
+        <button type="button" data-filter="all" class="score-filter-btn px-2.5 py-1 rounded-lg font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">All Modes</button>
+        <button type="button" data-filter="flux" class="score-filter-btn px-2.5 py-1 rounded-lg font-semibold text-slate-400 hover:text-white">Flux</button>
+        <button type="button" data-filter="surge" class="score-filter-btn px-2.5 py-1 rounded-lg font-semibold text-slate-400 hover:text-white">Avalanche</button>
+        <button type="button" data-filter="tactical" class="score-filter-btn px-2.5 py-1 rounded-lg font-semibold text-slate-400 hover:text-white">Tactical</button>
+      </div>
+
+      <!-- Leaderboard List -->
+      <div id="leaderboardContainer" class="flex-1 overflow-y-auto space-y-1.5 pr-1 min-h-[160px] max-h-[240px]">
+        <!-- Populated dynamically -->
+      </div>
+
+      <!-- Backup / Export & Reset Controls -->
+      <div class="border-t border-slate-800 pt-2.5 flex flex-col gap-2">
+        <div class="flex items-center justify-between gap-2">
+          <button id="btnExportScores" type="button" class="arcade-btn flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-cyan-300">
+            📋 Copy Backup JSON
+          </button>
+          <button id="btnToggleImport" type="button" class="arcade-btn flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200">
+            📥 Restore Backup
+          </button>
+          <button id="btnAskClearScores" type="button" class="arcade-btn py-2 px-3 rounded-xl bg-rose-950/60 hover:bg-rose-900/70 border border-rose-800/60 text-xs font-bold text-rose-300">
+            🗑 Reset
+          </button>
+        </div>
+
+        <!-- Hidden Import Box -->
+        <div id="importScoresBox" class="hidden flex-col gap-1.5 bg-slate-950 p-2 rounded-xl border border-slate-800">
+          <textarea id="importJsonInput" rows="2" placeholder="Paste exported high score JSON here..." class="w-full bg-slate-900 text-xs text-slate-200 p-2 rounded-lg border border-slate-700 focus:outline-none focus:border-cyan-400"></textarea>
+          <div class="flex justify-end gap-2">
+            <button id="btnCancelImport" type="button" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 text-xs font-semibold">Cancel</button>
+            <button id="btnConfirmImport" type="button" class="px-3 py-1 rounded-lg bg-cyan-500 text-slate-950 text-xs font-extrabold">Import Scores</button>
+          </div>
+        </div>
+
+        <!-- Hidden Confirm Reset Box -->
+        <div id="confirmResetBox" class="hidden items-center justify-between bg-rose-950/80 border border-rose-700/70 px-3 py-2 rounded-xl text-xs">
+          <span class="text-rose-200 font-semibold">Erase all saved high scores?</span>
+          <div class="flex items-center gap-1.5">
+            <button id="btnCancelReset" type="button" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 font-semibold">Keep</button>
+            <button id="btnConfirmReset" type="button" class="px-2.5 py-1 rounded-lg bg-rose-600 text-white font-extrabold">Erase</button>
+          </div>
+        </div>
+
+        <p id="modalFeedbackMsg" class="text-[11px] text-center text-emerald-400 font-semibold hidden"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Install on iPhone & Android Guide Modal -->
+  <div id="installModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-slate-900 border border-slate-700/90 rounded-2xl w-full max-w-md p-4 shadow-2xl flex flex-col gap-3">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">📱</span>
+          <div>
+            <h2 class="text-base font-extrabold text-white">Run on iPhone &amp; Android</h2>
+            <p class="text-[11px] text-slate-400">Install as a full-screen offline phone app</p>
+          </div>
+        </div>
+        <button id="btnCloseInstall" type="button" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold">✕</button>
+      </div>
+
+      <div class="space-y-2.5 text-xs text-slate-300">
+        <div class="p-3 rounded-xl bg-slate-950/90 border border-slate-800">
+          <div class="font-extrabold text-cyan-300 mb-1">🍎 Apple iOS (iPhone / iPad)</div>
+          <ol class="list-decimal list-inside space-y-1 text-slate-300">
+            <li>Open this game in <strong>Safari</strong> on your iPhone.</li>
+            <li>Tap the <strong>Share</strong> button <span class="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-[10px]">↑</span> at the bottom of the screen.</li>
+            <li>Select <strong>Add to Home Screen</strong>. It launches full-screen like a native app!</li>
+          </ol>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-950/90 border border-slate-800">
+          <div class="font-extrabold text-emerald-300 mb-1">🤖 Android (Chrome / Edge)</div>
+          <ol class="list-decimal list-inside space-y-1 text-slate-300">
+            <li>Open this game in <strong>Chrome</strong> on Android.</li>
+            <li>Tap the <strong>⋮ Menu</strong> in the top-right corner.</li>
+            <li>Tap <strong>Add to Home screen</strong> or <strong>Install app</strong>.</li>
+          </ol>
+        </div>
+
+        <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200">
+          <div class="font-extrabold mb-0.5">💾 How On-Device High Scores Work</div>
+          <p class="text-[11px] leading-relaxed text-amber-100/90">
+            Your high scores and lifetime stats are stored directly on your phone using dual <strong>localStorage + IndexedDB</strong> persistence. They stay saved even when you close the app or play offline in Airplane Mode.
+          </p>
+        </div>
+      </div>
+
+      <button id="btnDoneInstall" type="button" class="arcade-btn w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs">
+        Got It — Back to Game
+      </button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // --- 1. PWA Manifest & Touch Icon Injection ---
+      function injectPwaMetadata() {
+        try {
+          const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+            <rect width="192" height="192" rx="40" fill="#090d16"/>
+            <rect x="28" y="28" width="40" height="40" rx="8" fill="#06b6d4"/>
+            <rect x="76" y="28" width="40" height="40" rx="8" fill="#06b6d4"/>
+            <rect x="76" y="76" width="40" height="40" rx="8" fill="#f59e0b"/>
+            <rect x="124" y="76" width="40" height="40" rx="8" fill="#f59e0b"/>
+            <path d="M56 154 L40 134 L72 134 Z" fill="#06b6d4"/>
+            <path d="M136 122 L120 142 L152 142 Z" fill="#f59e0b"/>
+          </svg>`;
+          const iconDataUrl = 'data:image/svg+xml;utf8,' + encodeURIComponent(svgIcon);
+
+          const appleIcon = document.createElement('link');
+          appleIcon.rel = 'apple-touch-icon';
+          appleIcon.href = iconDataUrl;
+          document.head.appendChild(appleIcon);
+
+          const manifest = {
+            name: 'GravTris — Shifting Gravity Tetris',
+            short_name: 'GravTris',
+            start_url: '.',
+            display: 'standalone',
+            orientation: 'portrait',
+            background_color: '#090d16',
+            theme_color: '#090d16',
+            icons: [
+              { src: iconDataUrl, sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable' }
+            ]
+          };
+          const manifestLink = document.createElement('link');
+          manifestLink.rel = 'manifest';
+          manifestLink.href = 'data:application/manifest+json;utf8,' + encodeURIComponent(JSON.stringify(manifest));
+          document.head.appendChild(manifestLink);
+        } catch (err) {
+          // Ignore in restricted iframe
+        }
+      }
+      injectPwaMetadata();
+
+      // --- 2. Dual On-Device Storage Manager (localStorage + IndexedDB + Memory Fallback) ---
+      const STORAGE_KEY = 'gravtris_device_save_v1';
+      let memoryStore = {
+        playerName: 'PLAYER 1',
+        highScores: [
+          { id: 'seed-1', name: 'GRAV-PRO', score: 4200, lines: 18, level: 3, shifts: 7, mode: 'flux', date: '2026-10-15' },
+          { id: 'seed-2', name: 'ORBITER', score: 2650, lines: 12, level: 2, shifts: 5, mode: 'surge', date: '2026-10-15' },
+          { id: 'seed-3', name: 'TACTICIAN', score: 1800, lines: 9, level: 2, shifts: 4, mode: 'tactical', date: '2026-10-15' }
+        ],
+        stats: {
+          gamesPlayed: 0,
+          allTimeBest: 4200,
+          totalLines: 0,
+          totalShifts: 0
+        }
+      };
+
+      function loadFromDevice() {
+        try {
+          const raw = window.localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && Array.isArray(parsed.highScores)) {
+              memoryStore = {
+                playerName: parsed.playerName || 'PLAYER 1',
+                highScores: parsed.highScores,
+                stats: Object.assign({ gamesPlayed: 0, allTimeBest: 0, totalLines: 0, totalShifts: 0 }, parsed.stats || {})
+              };
+            }
+          }
+        } catch (e) {
+          // Fallback to IndexedDB or memoryStore
+        }
+        // Also try reading from IndexedDB asynchronously if available
+        try {
+          if (window.indexedDB) {
+            const req = window.indexedDB.open('GravTrisDB', 1);
+            req.onupgradeneeded = function (ev) {
+              const db = ev.target.result;
+              if (!db.objectStoreNames.contains('saves')) {
+                db.createObjectStore('saves');
+              }
+            };
+            req.onsuccess = function (ev) {
+              const db = ev.target.result;
+              const tx = db.transaction('saves', 'readonly');
+              const getReq = tx.objectStore('saves').get('main');
+              getReq.onsuccess = function () {
+                if (getReq.result && Array.isArray(getReq.result.highScores)) {
+                  if ((getReq.result.stats?.gamesPlayed || 0) >= (memoryStore.stats?.gamesPlayed || 0)) {
+                    memoryStore = getReq.result;
+                    updateBestScoreUI();
+                  }
+                }
+              };
+            };
+          }
+        } catch (e) {
+          // Ignore IDB errors in sandboxed contexts
+        }
+      }
+
+      function saveToDevice() {
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(memoryStore));
+        } catch (e) {
+          // Ignore if localStorage blocked
+        }
+        try {
+          if (window.indexedDB) {
+            const req = window.indexedDB.open('GravTrisDB', 1);
+            req.onsuccess = function (ev) {
+              const db = ev.target.result;
+              const tx = db.transaction('saves', 'readwrite');
+              tx.objectStore('saves').put(memoryStore, 'main');
+            };
+          }
+        } catch (e) {
+          // Ignore IDB errors
+        }
+      }
+
+      function getBestScoreForMode(mode) {
+        let best = 0;
+        for (let i = 0; i < memoryStore.highScores.length; i++) {
+          const entry = memoryStore.highScores[i];
+          if (!mode || mode === 'all' || entry.mode === mode) {
+            if (entry.score > best) best = entry.score;
+          }
+        }
+        return Math.max(best, mode ? 0 : (memoryStore.stats.allTimeBest || 0));
+      }
+
+      function recordHighScore(name, score, lines, level, shifts, mode) {
+        const cleanName = (name || 'PLAYER 1').trim().toUpperCase().slice(0, 10) || 'PLAYER 1';
+        memoryStore.playerName = cleanName;
+        const today = new Date().toISOString().slice(0, 10);
+        const entry = {
+          id: 'score-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+          name: cleanName,
+          score: score,
+          lines: lines,
+          level: level,
+          shifts: shifts,
+          mode: mode,
+          date: today
+        };
+        memoryStore.highScores.push(entry);
+        memoryStore.highScores.sort(function (a, b) { return b.score - a.score; });
+        if (memoryStore.highScores.length > 25) {
+          memoryStore.highScores = memoryStore.highScores.slice(0, 25);
+        }
+        if (score > (memoryStore.stats.allTimeBest || 0)) {
+          memoryStore.stats.allTimeBest = score;
+        }
+        saveToDevice();
+        updateBestScoreUI();
+        return entry;
+      }
+
+      // --- 3. Web Audio Synthesizer (Zero External Files) ---
+      let audioCtx = null;
+      let isMuted = false;
+
+      function ensureAudio() {
+        if (isMuted) return null;
+        try {
+          if (!audioCtx) {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) {
+              audioCtx = new AudioContextClass();
+            }
+          }
+          if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+          }
+        } catch (e) {
+          audioCtx = null;
+        }
+        return audioCtx;
+      }
+
+      function playTone(freq, type, duration, gainVal, slideFreq) {
+        const ctx = ensureAudio();
+        if (!ctx) return;
+        try {
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = type || 'sine';
+          osc.frequency.setValueAtTime(freq, now);
+          if (slideFreq) {
+            osc.frequency.exponentialRampToValueAtTime(slideFreq, now + duration);
+          }
+          gain.gain.setValueAtTime(gainVal || 0.08, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + duration);
+        } catch (e) {}
+      }
+
+      const sfx = {
+        move: function () { playTone(230, 'triangle', 0.045, 0.06, 260); },
+        rotate: function () { playTone(380, 'sine', 0.07, 0.08, 540); },
+        softDrop: function () { playTone(180, 'sine', 0.035, 0.05, 150); },
+        hardDrop: function () { playTone(160, 'square', 0.11, 0.1, 58); },
+        hold: function () { playTone(320, 'triangle', 0.08, 0.07, 440); },
+        clear: function (count) {
+          const notes = count >= 4 ? [523, 659, 784, 1046] : [440, 554, 659];
+          notes.forEach(function (n, idx) {
+            setTimeout(function () { playTone(n, 'triangle', 0.16, 0.11, n * 1.05); }, idx * 55);
+          });
+        },
+        gravityWarn: function () {
+          playTone(620, 'sine', 0.08, 0.07, 480);
+        },
+        gravityFlip: function (dir) {
+          if (dir === -1) {
+            // Flipping UP
+            playTone(220, 'sawtooth', 0.26, 0.09, 660);
+          } else {
+            // Flipping DOWN
+            playTone(660, 'sawtooth', 0.26, 0.09, 220);
+          }
+        },
+        gameOver: function () {
+          [340, 300, 250, 190].forEach(function (n, idx) {
+            setTimeout(function () { playTone(n, 'sawtooth', 0.22, 0.08, n * 0.88); }, idx * 120);
+          });
+        }
+      };
+
+      // --- 4. Tetromino Definitions & Colors ---
+      const COLS = 10;
+      const ROWS = 20;
+      const CELL = 24;
+
+      const PIECES = {
+        I: {
+          color: '#06b6d4',
+          light: '#67e8f9',
+          matrix: [
+            [0, 0, 0, 0],
+            [1, 1, 1, 1],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0]
+          ]
+        },
+        J: {
+          color: '#3b82f6',
+          light: '#93c5fd',
+          matrix: [
+            [1, 0, 0],
+            [1, 1, 1],
+            [0, 0, 0]
+          ]
+        },
+        L: {
+          color: '#f97316',
+          light: '#fdba74',
+          matrix: [
+            [0, 0, 1],
+            [1, 1, 1],
+            [0, 0, 0]
+          ]
+        },
+        O: {
+          color: '#eab308',
+          light: '#fde047',
+          matrix: [
+            [1, 1],
+            [1, 1]
+          ]
+        },
+        S: {
+          color: '#22c55e',
+          light: '#86efac',
+          matrix: [
+            [0, 1, 1],
+            [1, 1, 0],
+            [0, 0, 0]
+          ]
+        },
+        T: {
+          color: '#a855f7',
+          light: '#d8b4fe',
+          matrix: [
+            [0, 1, 0],
+            [1, 1, 1],
+            [0, 0, 0]
+          ]
+        },
+        Z: {
+          color: '#ef4444',
+          light: '#fca5a5',
+          matrix: [
+            [1, 1, 0],
+            [0, 1, 1],
+            [0, 0, 0]
+          ]
+        }
+      };
+      const PIECE_KEYS = Object.keys(PIECES);
+
+      // --- 5. Game State ---
+      let board = createEmptyBoard();
+      let gameMode = 'flux'; // 'flux' | 'surge' | 'tactical'
+      let gravityDir = 1; // 1 = DOWN (falls toward row 19), -1 = UP (falls toward row 0)
+      let piecesUntilFlip = 5;
+      const FLIP_INTERVAL = 5;
+      let manualFlipCharges = 1;
+      const MAX_FLIP_CHARGES = 3;
+
+      let bag = [];
+      let nextQueue = [];
+      let activePiece = null;
+      let holdType = null;
+      let canHold = true;
+
+      let score = 0;
+      let lines = 0;
+      let level = 1;
+      let shiftsCount = 0;
+      let comboCount = 0;
+      let isPaused = false;
+      let isGameOver = false;
+      let currentRunSaved = false;
+
+      let dropCounter = 0;
+      let lastTime = 0;
+      let animFrameId = null;
+      let particles = [];
+
+      // DOM Elements
+      const gameCanvas = document.getElementById('gameCanvas');
+      const ctx = gameCanvas.getContext('2d');
+      const nextCanvas = document.getElementById('nextCanvas');
+      const nextCtx = nextCanvas.getContext('2d');
+      const holdCanvas = document.getElementById('holdCanvas');
+      const holdCtx = holdCanvas.getContext('2d');
+
+      const boardFrame = document.getElementById('boardFrame');
+      const ceilingWellBar = document.getElementById('ceilingWellBar');
+      const floorWellBar = document.getElementById('floorWellBar');
+      const gravityBadgeIcon = document.getElementById('gravityBadgeIcon');
+      const gravityArrowGlyph = document.getElementById('gravityArrowGlyph');
+      const gravityStatePill = document.getElementById('gravityStatePill');
+      const sideGravityIndicator = document.getElementById('sideGravityIndicator');
+      const modeSubtitleText = document.getElementById('modeSubtitleText');
+      const softDropGlyph = document.getElementById('softDropGlyph');
+      const hardDropGlyph = document.getElementById('hardDropGlyph');
+
+      const scoreValueEl = document.getElementById('scoreValue');
+      const bestScoreValueEl = document.getElementById('bestScoreValue');
+      const headerBestScoreEl = document.getElementById('headerBestScore');
+      const linesValueEl = document.getElementById('linesValue');
+      const levelValueEl = document.getElementById('levelValue');
+      const shiftsCountValueEl = document.getElementById('shiftsCountValue');
+      const shiftMeterLabelEl = document.getElementById('shiftMeterLabel');
+      const shiftCountdownTextEl = document.getElementById('shiftCountdownText');
+      const shiftProgressBarEl = document.getElementById('shiftProgressBar');
+      const flipChargeBadgeEl = document.getElementById('flipChargeBadge');
+      const comboPillEl = document.getElementById('comboPill');
+      const gravityBanner = document.getElementById('gravityBanner');
+
+      const boardOverlay = document.getElementById('boardOverlay');
+      const overlayBadge = document.getElementById('overlayBadge');
+      const overlayTitle = document.getElementById('overlayTitle');
+      const overlayDesc = document.getElementById('overlayDesc');
+      const saveScoreBox = document.getElementById('saveScoreBox');
+      const playerNameInput = document.getElementById('playerNameInput');
+      const scoreSavedConfirm = document.getElementById('scoreSavedConfirm');
+      const btnOverlayPrimary = document.getElementById('btnOverlayPrimary');
+      const pauseBtnText = document.getElementById('pauseBtnText');
+
+      function createEmptyBoard() {
+        const b = [];
+        for (let r = 0; r < ROWS; r++) {
+          b.push(new Array(COLS).fill(null));
+        }
+        return b;
+      }
+
+      function cloneMatrix(m) {
+        return m.map(function (row) { return row.slice(); });
+      }
+
+      function refillBag() {
+        const fresh = PIECE_KEYS.slice();
+        for (let i = fresh.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const temp = fresh[i];
+          fresh[i] = fresh[j];
+          fresh[j] = temp;
+        }
+        bag.push.apply(bag, fresh);
+      }
+
+      function pullNextType() {
+        while (bag.length < 7) refillBag();
+        return bag.shift();
+      }
+
+      function initQueues() {
+        bag = [];
+        nextQueue = [pullNextType(), pullNextType(), pullNextType()];
+      }
+
+      function spawnPiece(typeOverride) {
+        const type = typeOverride || nextQueue.shift();
+        if (!typeOverride) {
+          nextQueue.push(pullNextType());
+        }
+        const def = PIECES[type];
+        const matrix = cloneMatrix(def.matrix);
+        const x = Math.floor((COLS - matrix[0].length) / 2);
+
+        // Spawn at the opposite end from the current gravity well!
+        // When gravityDir === 1 (DOWN), spawn near top (row 0)
+        // When gravityDir === -1 (UP), spawn near bottom (row ROWS - matrix.length)
+        const y = gravityDir === 1 ? 0 : (ROWS - matrix.length);
+
+        activePiece = {
+          type: type,
+          matrix: matrix,
+          x: x,
+          y: y,
+          color: def.color,
+          light: def.light
+        };
+
+        updateSlideThumbPosition();
+
+        if (collides(board, activePiece, 0, 0, activePiece.matrix)) {
+          triggerGameOver();
+        }
+      }
+
+      function collides(grid, piece, offsetX, offsetY, testMatrix) {
+        const m = testMatrix || piece.matrix;
+        for (let r = 0; r < m.length; r++) {
+          for (let c = 0; c < m[r].length; c++) {
+            if (!m[r][c]) continue;
+            const nx = piece.x + c + offsetX;
+            const ny = piece.y + r + offsetY;
+            if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) {
+              return true;
+            }
+            if (grid[ny][nx]) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+
+      function rotateMatrixCW(matrix) {
+        const N = matrix.length;
+        const result = matrix.map(function (row) { return row.slice(); });
+        for (let r = 0; r < N; r++) {
+          for (let c = 0; c < N; c++) {
+            result[c][N - 1 - r] = matrix[r][c];
+          }
+        }
+        return result;
+      }
+
+      function rotateActivePiece() {
+        if (!activePiece || isPaused || isGameOver) return;
+        const rotated = rotateMatrixCW(activePiece.matrix);
+        // Wall kick offsets (horizontal + gravity-aware vertical kicks)
+        const kicks = [
+          [0, 0],
+          [-1, 0],
+          [1, 0],
+          [-2, 0],
+          [2, 0],
+          [0, -gravityDir],
+          [-1, -gravityDir],
+          [1, -gravityDir]
+        ];
+        for (let i = 0; i < kicks.length; i++) {
+          const kx = kicks[i][0];
+          const ky = kicks[i][1];
+          if (!collides(board, activePiece, kx, ky, rotated)) {
+            activePiece.x += kx;
+            activePiece.y += ky;
+            activePiece.matrix = rotated;
+            sfx.rotate();
+            updateSlideThumbPosition();
+            drawAll();
+            return;
+          }
+        }
+      }
+
+      function moveHorizontal(dir) {
+        if (!activePiece || isPaused || isGameOver) return false;
+        if (!collides(board, activePiece, dir, 0, activePiece.matrix)) {
+          activePiece.x += dir;
+          sfx.move();
+          updateSlideThumbPosition();
+          drawAll();
+          return true;
+        }
+        return false;
+      }
+
+      function movePieceToColumn(targetCenterCol) {
+        if (!activePiece || isPaused || isGameOver) return;
+        const pieceWidth = activePiece.matrix[0].length;
+        const desiredX = Math.round(targetCenterCol - pieceWidth / 2);
+        const maxSteps = COLS;
+        let steps = 0;
+        while (activePiece.x !== desiredX && steps < maxSteps) {
+          const stepDir = desiredX > activePiece.x ? 1 : -1;
+          if (!collides(board, activePiece, stepDir, 0, activePiece.matrix)) {
+            activePiece.x += stepDir;
+            sfx.move();
+          } else {
+            break;
+          }
+          steps++;
+        }
+        updateSlideThumbPosition();
+        drawAll();
+      }
+
+      function getGhostY() {
+        if (!activePiece) return 0;
+        let offset = 0;
+        while (!collides(board, activePiece, 0, offset + gravityDir, activePiece.matrix)) {
+          offset += gravityDir;
+        }
+        return activePiece.y + offset;
+      }
+
+      function stepGravity(isManualSoftDrop) {
+        if (!activePiece || isPaused || isGameOver) return;
+        if (!collides(board, activePiece, 0, gravityDir, activePiece.matrix)) {
+          activePiece.y += gravityDir;
+          if (isManualSoftDrop) {
+            score += 1;
+            sfx.softDrop();
+            updateHudNumbers();
+          }
+        } else {
+          lockActivePiece();
+        }
+      }
+
+      function hardDrop() {
+        if (!activePiece || isPaused || isGameOver) return;
+        let cellsDropped = 0;
+        while (!collides(board, activePiece, 0, gravityDir, activePiece.matrix)) {
+          activePiece.y += gravityDir;
+          cellsDropped++;
+        }
+        score += cellsDropped * 2;
+        sfx.hardDrop();
+        spawnBlockParticles(activePiece);
+        lockActivePiece();
+      }
+
+      function holdCurrentPiece() {
+        if (!activePiece || !canHold || isPaused || isGameOver) return;
+        sfx.hold();
+        const currentType = activePiece.type;
+        canHold = false;
+        if (holdType === null) {
+          holdType = currentType;
+          spawnPiece();
+        } else {
+          const swapType = holdType;
+          holdType = currentType;
+          spawnPiece(swapType);
+        }
+        drawAll();
+      }
+
+      function lockActivePiece() {
+        const m = activePiece.matrix;
+        for (let r = 0; r < m.length; r++) {
+          for (let c = 0; c < m[r].length; c++) {
+            if (!m[r][c]) continue;
+            const bx = activePiece.x + c;
+            const by = activePiece.y + r;
+            if (by >= 0 && by < ROWS && bx >= 0 && bx < COLS) {
+              board[by][bx] = {
+                color: activePiece.color,
+                light: activePiece.light
+              };
+            }
+          }
+        }
+
+        canHold = true;
+        const clearedNow = checkAndClearLines(false);
+        if (clearedNow > 0) {
+          comboCount++;
+          if (manualFlipCharges < MAX_FLIP_CHARGES) {
+            manualFlipCharges = Math.min(MAX_FLIP_CHARGES, manualFlipCharges + 1);
+          }
+        } else {
+          comboCount = 0;
+        }
+
+        // Handle mode-specific Gravity Shift progression
+        if (gameMode === 'flux' || gameMode === 'surge') {
+          piecesUntilFlip--;
+          if (piecesUntilFlip === 1) {
+            sfx.gravityWarn();
+          }
+          if (piecesUntilFlip <= 0) {
+            piecesUntilFlip = FLIP_INTERVAL;
+            performGravityFlip(false);
+          }
+        } else if (gameMode === 'tactical') {
+          // Recharge manual flip every 3 locked pieces
+          piecesUntilFlip--;
+          if (piecesUntilFlip <= 0) {
+            piecesUntilFlip = 3;
+            if (manualFlipCharges < MAX_FLIP_CHARGES) {
+              manualFlipCharges++;
+            }
+          }
+        }
+
+        updateHudNumbers();
+        spawnPiece();
+        drawAll();
+      }
+
+      function checkAndClearLines(isGravityCascade) {
+        const remainingRows = [];
+        let cleared = 0;
+
+        for (let r = 0; r < ROWS; r++) {
+          const isFull = board[r].every(function (cell) { return cell !== null; });
+          if (isFull) {
+            cleared++;
+            spawnRowClearParticles(r);
+          } else {
+            remainingRows.push(board[r]);
+          }
+        }
+
+        if (cleared === 0) return 0;
+
+        // Pack remaining rows toward the active gravity well!
+        const emptyRows = [];
+        for (let i = 0; i < cleared; i++) {
+          emptyRows.push(new Array(COLS).fill(null));
+        }
+
+        if (gravityDir === 1) {
+          // Gravity is DOWN: empty rows at top, remaining rows packed at bottom
+          board = emptyRows.concat(remainingRows);
+        } else {
+          // Gravity is UP: remaining rows packed at top (ceiling), empty rows at bottom
+          board = remainingRows.concat(emptyRows);
+        }
+
+        const basePoints = [0, 100, 300, 500, 800][Math.min(cleared, 4)] || (cleared * 250);
+        const cascadeMultiplier = isGravityCascade ? 1.5 : 1;
+        const comboBonus = comboCount > 0 ? comboCount * 50 * level : 0;
+        score += Math.round(basePoints * level * cascadeMultiplier) + comboBonus;
+        lines += cleared;
+        level = Math.floor(lines / 8) + 1;
+
+        sfx.clear(cleared);
+        return cleared;
+      }
+
+      function settleBoardTowardGravity(enableAvalancheCascade) {
+        // First, shift non-empty rows together toward the active gravity pole
+        const nonEmptyRows = board.filter(function (row) {
+          return row.some(function (cell) { return cell !== null; });
+        });
+        const emptyCount = ROWS - nonEmptyRows.length;
+        const blanks = [];
+        for (let i = 0; i < emptyCount; i++) {
+          blanks.push(new Array(COLS).fill(null));
+        }
+        if (gravityDir === 1) {
+          board = blanks.concat(nonEmptyRows);
+        } else {
+          board = nonEmptyRows.concat(blanks);
+        }
+
+        // In 'surge' (Avalanche Flip) mode or when triggered manually, also slide loose column blocks 1 step into gaps!
+        if (enableAvalancheCascade) {
+          for (let c = 0; c < COLS; c++) {
+            if (gravityDir === 1) {
+              // Pull blocks down up to 2 spaces into gaps
+              for (let pass = 0; pass < 2; pass++) {
+                for (let r = ROWS - 1; r > 0; r--) {
+                  if (board[r][c] === null && board[r - 1][c] !== null) {
+                    board[r][c] = board[r - 1][c];
+                    board[r - 1][c] = null;
+                  }
+                }
+              }
+            } else {
+              // Pull blocks up up to 2 spaces into gaps
+              for (let pass = 0; pass < 2; pass++) {
+                for (let r = 0; r < ROWS - 1; r++) {
+                  if (board[r][c] === null && board[r + 1][c] !== null) {
+                    board[r][c] = board[r + 1][c];
+                    board[r + 1][c] = null;
+                  }
+                }
+              }
+            }
+          }
+          checkAndClearLines(true);
+        }
+      }
+
+      function performGravityFlip(isManualTrigger) {
+        if (isPaused || isGameOver) return;
+        if (isManualTrigger) {
+          if (manualFlipCharges <= 0) return;
+          manualFlipCharges--;
+          score += 25 * level;
+        }
+
+        gravityDir = -gravityDir;
+        shiftsCount++;
+        memoryStore.stats.totalShifts = (memoryStore.stats.totalShifts || 0) + 1;
+        saveToDevice();
+
+        sfx.gravityFlip(gravityDir);
+        settleBoardTowardGravity(gameMode === 'surge' || isManualTrigger);
+
+        // Reposition active piece safely near the new spawn zone if needed
+        if (activePiece) {
+          const targetY = gravityDir === 1 ? 0 : (ROWS - activePiece.matrix.length);
+          if (!collides(board, activePiece, 0, targetY - activePiece.y, activePiece.matrix)) {
+            activePiece.y = targetY;
+          }
+        }
+
+        showGravityBanner();
+        updateGravityThemeUI();
+        updateHudNumbers();
+        drawAll();
+      }
+
+      let bannerTimeout = null;
+      function showGravityBanner() {
+        gravityBanner.textContent = gravityDir === -1 ? '⬆ CEILING GRAVITY (UP)!' : '⬇ FLOOR GRAVITY (DOWN)!';
+        gravityBanner.className = 'pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl font-extrabold text-xs tracking-wider uppercase shadow-2xl transition-all duration-200 whitespace-nowrap z-10 opacity-100 scale-100 ' +
+          (gravityDir === -1
+            ? 'bg-amber-950/95 border border-amber-400 text-amber-200'
+            : 'bg-cyan-950/95 border border-cyan-400 text-cyan-200');
+
+        if (bannerTimeout) clearTimeout(bannerTimeout);
+        bannerTimeout = setTimeout(function () {
+          gravityBanner.classList.remove('opacity-100', 'scale-100');
+          gravityBanner.classList.add('opacity-0', 'scale-90');
+        }, 1250);
+      }
+
+      function updateGravityThemeUI() {
+        const isUp = gravityDir === -1;
+        boardFrame.classList.toggle('canvas-glow-up', isUp);
+        boardFrame.classList.toggle('canvas-glow-down', !isUp);
+
+        ceilingWellBar.className = 'absolute top-1 left-2 right-2 h-1 rounded-full transition-all duration-300 pointer-events-none ' +
+          (isUp ? 'bg-amber-400/90 shadow-[0_0_10px_#f59e0b]' : 'bg-amber-400/0');
+        floorWellBar.className = 'absolute bottom-1 left-2 right-2 h-1 rounded-full transition-all duration-300 pointer-events-none ' +
+          (!isUp ? 'bg-cyan-400/90 shadow-[0_0_10px_#06b6d4]' : 'bg-cyan-400/0');
+
+        gravityArrowGlyph.textContent = isUp ? '⬆' : '⬇';
+        gravityBadgeIcon.className = 'w-9 h-9 rounded-xl flex items-center justify-center font-bold text-lg shadow-inner transition-all duration-300 ' +
+          (isUp
+            ? 'bg-amber-500/20 border border-amber-400/50 text-amber-300'
+            : 'bg-cyan-500/15 border border-cyan-400/40 text-cyan-300');
+
+        gravityStatePill.textContent = isUp ? 'CEILING ↑' : 'FLOOR ↓';
+        gravityStatePill.className = 'text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md border ' +
+          (isUp
+            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+            : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30');
+
+        sideGravityIndicator.textContent = isUp ? '⬆ UPWARD' : '⬇ DOWN';
+        sideGravityIndicator.className = 'py-1.5 px-1 rounded-xl font-extrabold text-xs border ' +
+          (isUp
+            ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+            : 'bg-cyan-500/15 border-cyan-500/30 text-cyan-300');
+
+        softDropGlyph.textContent = isUp ? '▴' : '▾';
+        hardDropGlyph.textContent = isUp ? '⏫' : '⏬';
+      }
+
+      function updateBestScoreUI() {
+        const best = Math.max(score, getBestScoreForMode(gameMode));
+        bestScoreValueEl.textContent = best.toLocaleString();
+        headerBestScoreEl.textContent = Math.max(score, getBestScoreForMode('all')).toLocaleString();
+      }
+
+      function updateHudNumbers() {
+        scoreValueEl.textContent = score.toLocaleString();
+        linesValueEl.textContent = String(lines);
+        levelValueEl.textContent = String(level);
+        shiftsCountValueEl.textContent = String(shiftsCount);
+        updateBestScoreUI();
+
+        if (gameMode === 'tactical') {
+          shiftMeterLabelEl.textContent = 'Charge In';
+          shiftCountdownTextEl.textContent = piecesUntilFlip + ' blk';
+          const pct = Math.round(((3 - piecesUntilFlip) / 3) * 100);
+          shiftProgressBarEl.style.width = Math.max(12, pct) + '%';
+        } else {
+          shiftMeterLabelEl.textContent = 'Next Flip';
+          shiftCountdownTextEl.textContent = piecesUntilFlip + ' blk';
+          const pct = Math.round(((FLIP_INTERVAL - piecesUntilFlip + 1) / FLIP_INTERVAL) * 100);
+          shiftProgressBarEl.style.width = Math.min(100, Math.max(15, pct)) + '%';
+        }
+
+        flipChargeBadgeEl.textContent = manualFlipCharges > 0
+          ? 'Ready (' + manualFlipCharges + 'x)'
+          : 'Charging...';
+        document.getElementById('btnGravityFlip').classList.toggle('opacity-50', manualFlipCharges <= 0);
+
+        if (comboCount > 1) {
+          comboPillEl.textContent = comboCount + 'x Combo!';
+          comboPillEl.classList.remove('opacity-40');
+          comboPillEl.classList.add('opacity-100');
+        } else {
+          comboPillEl.textContent = '1x Multi';
+          comboPillEl.classList.remove('opacity-100');
+          comboPillEl.classList.add('opacity-40');
+        }
+      }
+
+      function updateSlideThumbPosition() {
+        const track = document.getElementById('touchSlideTrack');
+        const thumb = document.getElementById('touchSlideThumb');
+        if (!track || !thumb || !activePiece) return;
+        const pieceWidth = activePiece.matrix[0].length;
+        const maxCol = Math.max(1, COLS - pieceWidth);
+        const ratio = Math.min(1, Math.max(0, activePiece.x / maxCol));
+        const trackWidth = track.clientWidth - 44;
+        thumb.style.left = (4 + ratio * Math.max(0, trackWidth)) + 'px';
+      }
+
+      // --- 6. Particle Visual Effects ---
+      function spawnRowClearParticles(rowIdx) {
+        for (let c = 0; c < COLS; c++) {
+          const cell = board[rowIdx][c];
+          const color = cell ? cell.color : '#38bdf8';
+          for (let i = 0; i < 3; i++) {
+            particles.push({
+              x: (c + 0.5) * CELL,
+              y: (rowIdx + 0.5) * CELL,
+              vx: (Math.random() - 0.5) * 4,
+              vy: (Math.random() - 0.5) * 4 - gravityDir * 1.5,
+              size: 3 + Math.random() * 3,
+              alpha: 1,
+              color: color
+            });
+          }
+        }
+      }
+
+      function spawnBlockParticles(piece) {
+        const m = piece.matrix;
+        for (let r = 0; r < m.length; r++) {
+          for (let c = 0; c < m[r].length; c++) {
+            if (!m[r][c]) continue;
+            particles.push({
+              x: (piece.x + c + 0.5) * CELL,
+              y: (piece.y + r + 0.5) * CELL,
+              vx: (Math.random() - 0.5) * 2.2,
+              vy: -gravityDir * (1 + Math.random() * 2),
+              size: 3,
+              alpha: 0.85,
+              color: piece.light
+            });
+          }
+        }
+      }
+
+      // --- 7. Canvas Rendering ---
+      function drawBlockCell(context, x, y, size, color, lightColor, alpha) {
+        context.save();
+        context.globalAlpha = alpha !== undefined ? alpha : 1;
+        const pad = 1;
+        const bx = x * size + pad;
+        const by = y * size + pad;
+        const bw = size - pad * 2;
+        const bh = size - pad * 2;
+
+        context.fillStyle = color;
+        context.beginPath();
+        context.roundRect(bx, by, bw, bh, 4);
+        context.fill();
+
+        // Inner top/left highlight bevel
+        context.fillStyle = lightColor || '#ffffff';
+        context.globalAlpha = (alpha !== undefined ? alpha : 1) * 0.35;
+        context.fillRect(bx + 2, by + 2, bw - 4, 3);
+
+        context.restore();
+      }
+
+      function drawBoard() {
+        ctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+        // Subtle grid lines & directional ambient arrows
+        ctx.strokeStyle = 'rgba(30, 41, 59, 0.55)';
+        ctx.lineWidth = 1;
+        for (let c = 1; c < COLS; c++) {
+          ctx.beginPath();
+          ctx.moveTo(c * CELL, 0);
+          ctx.lineTo(c * CELL, ROWS * CELL);
+          ctx.stroke();
+        }
+        for (let r = 1; r < ROWS; r++) {
+          ctx.beginPath();
+          ctx.moveTo(0, r * CELL);
+          ctx.lineTo(COLS * CELL, r * CELL);
+          ctx.stroke();
+        }
+
+        // Draw subtle background gravity vector chevrons
+        ctx.save();
+        ctx.fillStyle = gravityDir === 1 ? 'rgba(6, 182, 212, 0.05)' : 'rgba(245, 158, 11, 0.06)';
+        ctx.font = 'bold 28px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const glyph = gravityDir === 1 ? '⬇' : '⬆';
+        ctx.fillText(glyph, gameCanvas.width / 2, gameCanvas.height * 0.25);
+        ctx.fillText(glyph, gameCanvas.width / 2, gameCanvas.height * 0.5);
+        ctx.fillText(glyph, gameCanvas.width / 2, gameCanvas.height * 0.75);
+        ctx.restore();
+
+        // Draw locked blocks
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            const cell = board[r][c];
+            if (cell) {
+              drawBlockCell(ctx, c, r, CELL, cell.color, cell.light, 1);
+            }
+          }
+        }
+
+        // Draw Ghost Piece & Active Piece
+        if (activePiece && !isGameOver) {
+          const ghostY = getGhostY();
+          const m = activePiece.matrix;
+
+          // Ghost outline
+          for (let r = 0; r < m.length; r++) {
+            for (let c = 0; c < m[r].length; c++) {
+              if (!m[r][c]) continue;
+              const gx = (activePiece.x + c) * CELL + 2;
+              const gy = (ghostY + r) * CELL + 2;
+              ctx.save();
+              ctx.strokeStyle = activePiece.color;
+              ctx.globalAlpha = 0.45;
+              ctx.lineWidth = 1.5;
+              ctx.strokeRect(gx, gy, CELL - 4, CELL - 4);
+              ctx.restore();
+            }
+          }
+
+          // Active Piece
+          for (let r = 0; r < m.length; r++) {
+            for (let c = 0; c < m[r].length; c++) {
+              if (!m[r][c]) continue;
+              drawBlockCell(
+                ctx,
+                activePiece.x + c,
+                activePiece.y + r,
+                CELL,
+                activePiece.color,
+                activePiece.light,
+                1
+              );
+            }
+          }
+        }
+
+        // Draw particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, p.alpha);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+          ctx.restore();
+          p.x += p.vx;
+          p.y += p.vy;
+          p.alpha -= 0.04;
+          if (p.alpha <= 0) {
+            particles.splice(i, 1);
+          }
+        }
+      }
+
+      function drawMiniPiece(context, canvasEl, type, offsetY) {
+        if (!type) return;
+        const def = PIECES[type];
+        const m = def.matrix;
+        const miniSize = 14;
+        let minC = m[0].length, maxC = 0, minR = m.length, maxR = 0;
+        for (let r = 0; r < m.length; r++) {
+          for (let c = 0; c < m[r].length; c++) {
+            if (m[r][c]) {
+              if (c < minC) minC = c;
+              if (c > maxC) maxC = c;
+              if (r < minR) minR = r;
+              if (r > maxR) maxR = r;
+            }
+          }
+        }
+        const w = (maxC - minC + 1) * miniSize;
+        const h = (maxR - minR + 1) * miniSize;
+        const startX = (canvasEl.width - w) / 2;
+        const startY = offsetY + (52 - h) / 2;
+
+        for (let r = minR; r <= maxR; r++) {
+          for (let c = minC; c <= maxC; c++) {
+            if (!m[r][c]) continue;
+            const px = startX + (c - minC) * miniSize;
+            const py = startY + (r - minR) * miniSize;
+            context.fillStyle = def.color;
+            context.beginPath();
+            context.roundRect(px + 1, py + 1, miniSize - 2, miniSize - 2, 3);
+            context.fill();
+          }
+        }
+      }
+
+      function drawSidePanels() {
+        holdCtx.clearRect(0, 0, holdCanvas.width, holdCanvas.height);
+        if (holdType) {
+          drawMiniPiece(holdCtx, holdCanvas, holdType, 2);
+        }
+
+        nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+        for (let i = 0; i < Math.min(3, nextQueue.length); i++) {
+          drawMiniPiece(nextCtx, nextCanvas, nextQueue[i], i * 54 + 2);
+        }
+      }
+
+      function drawAll() {
+        drawBoard();
+        drawSidePanels();
+      }
+
+      // --- 8. Game Loop & Lifecycle ---
+      function getDropIntervalMs() {
+        return Math.max(130, 820 - (level - 1) * 62);
+      }
+
+      function gameLoop(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        const delta = timestamp - lastTime;
+        lastTime = timestamp;
+
+        if (!isPaused && !isGameOver) {
+          dropCounter += delta;
+          if (dropCounter >= getDropIntervalMs()) {
+            dropCounter = 0;
+            stepGravity(false);
+          }
+          drawAll();
+        } else if (particles.length > 0) {
+          drawBoard();
+        }
+
+        animFrameId = window.requestAnimationFrame(gameLoop);
+      }
+
+      function startNewGame(selectedMode) {
+        if (selectedMode) {
+          gameMode = selectedMode;
+        }
+        board = createEmptyBoard();
+        gravityDir = 1;
+        piecesUntilFlip = gameMode === 'tactical' ? 3 : FLIP_INTERVAL;
+        manualFlipCharges = gameMode === 'tactical' ? 2 : 1;
+        holdType = null;
+        canHold = true;
+        score = 0;
+        lines = 0;
+        level = 1;
+        shiftsCount = 0;
+        comboCount = 0;
+        isPaused = false;
+        isGameOver = false;
+        currentRunSaved = false;
+        dropCounter = 0;
+        particles = [];
+
+        boardOverlay.classList.add('hidden');
+        saveScoreBox.classList.add('hidden');
+        scoreSavedConfirm.classList.add('hidden');
+        pauseBtnText.textContent = '⏸';
+
+        updateModeTabStyles();
+        updateGravityThemeUI();
+        initQueues();
+        spawnPiece();
+        updateHudNumbers();
+        drawAll();
+      }
+
+      function triggerGameOver() {
+        isGameOver = true;
+        sfx.gameOver();
+
+        memoryStore.stats.gamesPlayed = (memoryStore.stats.gamesPlayed || 0) + 1;
+        memoryStore.stats.totalLines = (memoryStore.stats.totalLines || 0) + lines;
+        if (score > (memoryStore.stats.allTimeBest || 0)) {
+          memoryStore.stats.allTimeBest = score;
+        }
+        saveToDevice();
+        updateBestScoreUI();
+
+        overlayBadge.textContent = 'Run Complete';
+        overlayTitle.textContent = 'GAME OVER';
+        overlayDesc.textContent = 'Score: ' + score.toLocaleString() + ' • Lines: ' + lines + ' • Gravity Flips: ' + shiftsCount;
+        btnOverlayPrimary.textContent = 'PLAY AGAIN';
+
+        if (score > 0) {
+          saveScoreBox.classList.remove('hidden');
+          playerNameInput.value = memoryStore.playerName || 'PLAYER 1';
+          scoreSavedConfirm.classList.add('hidden');
+          document.getElementById('btnSaveScore').disabled = false;
+          document.getElementById('btnSaveScore').textContent = 'Save';
+        } else {
+          saveScoreBox.classList.add('hidden');
+        }
+
+        boardOverlay.classList.remove('hidden');
+      }
+
+      function togglePause() {
+        if (isGameOver) {
+          startNewGame();
+          return;
+        }
+        isPaused = !isPaused;
+        if (isPaused) {
+          overlayBadge.textContent = 'Game Paused';
+          overlayTitle.textContent = 'PAUSED';
+          overlayDesc.textContent = 'Slide finger on the board or use the Left/Right buttons to move blocks.';
+          saveScoreBox.classList.add('hidden');
+          btnOverlayPrimary.textContent = 'RESUME GAME';
+          boardOverlay.classList.remove('hidden');
+          pauseBtnText.textContent = '▶';
+        } else {
+          boardOverlay.classList.add('hidden');
+          pauseBtnText.textContent = '⏸';
+          lastTime = performance.now();
+        }
+      }
+
+      function updateModeTabStyles() {
+        const modeDescriptions = {
+          flux: 'Flux Cycle • Auto-Flip every 5 blocks',
+          surge: 'Avalanche Flip • Blocks cascade into gaps on flip',
+          tactical: 'Tactical Mode • You control when gravity flips'
+        };
+        modeSubtitleText.textContent = modeDescriptions[gameMode] || modeDescriptions.flux;
+
+        const buttons = document.querySelectorAll('.mode-tab-btn');
+        buttons.forEach(function (btn) {
+          const m = btn.getAttribute('data-mode');
+          if (m === gameMode) {
+            btn.className = 'mode-tab-btn py-1.5 px-2 rounded-lg text-xs font-bold transition-all bg-cyan-500/20 text-cyan-300 border border-cyan-500/40';
+          } else {
+            btn.className = 'mode-tab-btn py-1.5 px-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 border border-transparent';
+          }
+        });
+      }
+
+      // --- 9. Touch & Back-and-Forth Input Handling ---
+      // Hold-to-repeat helper for Left / Right / Step buttons
+      function bindHoldButton(btnEl, actionFn, initialDelay, repeatInterval) {
+        let timeoutId = null;
+        let intervalId = null;
+
+        function clearTimers() {
+          if (timeoutId) { clearTimeout(timeoutId); timeoutId = null; }
+          if (intervalId) { clearInterval(intervalId); intervalId = null; }
+          btnEl.classList.remove('is-pressed');
+        }
+
+        function startPress(ev) {
+          if (ev.cancelable) ev.preventDefault();
+          ensureAudio();
+          clearTimers();
+          btnEl.classList.add('is-pressed');
+          actionFn();
+          timeoutId = setTimeout(function () {
+            intervalId = setInterval(actionFn, repeatInterval || 65);
+          }, initialDelay || 170);
+        }
+
+        btnEl.addEventListener('pointerdown', startPress);
+        btnEl.addEventListener('pointerup', clearTimers);
+        btnEl.addEventListener('pointerleave', clearTimers);
+        btnEl.addEventListener('pointercancel', clearTimers);
+      }
+
+      bindHoldButton(document.getElementById('btnMoveLeft'), function () { moveHorizontal(-1); }, 165, 65);
+      bindHoldButton(document.getElementById('btnMoveRight'), function () { moveHorizontal(1); }, 165, 65);
+      bindHoldButton(document.getElementById('btnSoftDrop'), function () { stepGravity(true); drawAll(); }, 130, 55);
+
+      document.getElementById('btnRotate').addEventListener('pointerdown', function (e) {
+        if (e.cancelable) e.preventDefault();
+        ensureAudio();
+        rotateActivePiece();
+      });
+
+      document.getElementById('btnHardDrop').addEventListener('pointerdown', function (e) {
+        if (e.cancelable) e.preventDefault();
+        ensureAudio();
+        hardDrop();
+      });
+
+      document.getElementById('btnGravityFlip').addEventListener('click', function () {
+        ensureAudio();
+        performGravityFlip(true);
+      });
+
+      document.getElementById('btnHoldPiece').addEventListener('click', function () {
+        ensureAudio();
+        holdCurrentPiece();
+      });
+      holdCanvas.addEventListener('click', function () {
+        ensureAudio();
+        holdCurrentPiece();
+      });
+
+      // Direct Board Touch: Drag left/right to move back & forth, tap to rotate, swipe in gravity direction to drop
+      let boardTouchStartX = null;
+      let boardTouchStartY = null;
+      let boardTouchLastCol = null;
+      let boardTouchMoved = false;
+      let boardTouchStartTime = 0;
+
+      gameCanvas.addEventListener('pointerdown', function (ev) {
+        if (isPaused || isGameOver) return;
+        ensureAudio();
+        gameCanvas.setPointerCapture(ev.pointerId);
+        const rect = gameCanvas.getBoundingClientRect();
+        boardTouchStartX = ev.clientX;
+        boardTouchStartY = ev.clientY;
+        const relX = ev.clientX - rect.left;
+        boardTouchLastCol = Math.floor((relX / rect.width) * COLS);
+        boardTouchMoved = false;
+        boardTouchStartTime = performance.now();
+      });
+
+      gameCanvas.addEventListener('pointermove', function (ev) {
+        if (boardTouchStartX === null || isPaused || isGameOver) return;
+        const rect = gameCanvas.getBoundingClientRect();
+        const dx = ev.clientX - boardTouchStartX;
+        const dy = ev.clientY - boardTouchStartY;
+
+        if (Math.abs(dx) > 8) {
+          boardTouchMoved = true;
+        }
+
+        const relX = Math.max(0, Math.min(rect.width - 1, ev.clientX - rect.left));
+        const currentCol = Math.floor((relX / rect.width) * COLS);
+        if (currentCol !== boardTouchLastCol) {
+          const step = currentCol > boardTouchLastCol ? 1 : -1;
+          moveHorizontal(step);
+          boardTouchLastCol = currentCol;
+        }
+
+        // Check for quick swipe in the gravity direction
+        if (Math.abs(dy) > 48 && Math.abs(dy) > Math.abs(dx) * 1.5) {
+          const swipeDir = dy > 0 ? 1 : -1;
+          if (swipeDir === gravityDir) {
+            boardTouchStartX = null;
+            hardDrop();
+          } else {
+            // Swipe against gravity triggers manual flip if charged!
+            if (manualFlipCharges > 0) {
+              boardTouchStartX = null;
+              performGravityFlip(true);
+            }
+          }
+        }
+      });
+
+      gameCanvas.addEventListener('pointerup', function (ev) {
+        if (boardTouchStartX === null) return;
+        const elapsed = performance.now() - boardTouchStartTime;
+        const dx = Math.abs(ev.clientX - boardTouchStartX);
+        const dy = Math.abs(ev.clientY - boardTouchStartY);
+        boardTouchStartX = null;
+
+        if (!boardTouchMoved && dx < 12 && dy < 12 && elapsed < 260) {
+          rotateActivePiece();
+        }
+      });
+
+      // Touch Slide Track (Back-and-Forth Scrub Bar)
+      const touchSlideTrack = document.getElementById('touchSlideTrack');
+      let slideActive = false;
+
+      function handleSlideTrackPointer(ev) {
+        if (!slideActive || isPaused || isGameOver) return;
+        const rect = touchSlideTrack.getBoundingClientRect();
+        const relX = Math.max(0, Math.min(rect.width, ev.clientX - rect.left));
+        const targetCol = (relX / rect.width) * COLS;
+        movePieceToColumn(targetCol);
+      }
+
+      touchSlideTrack.addEventListener('pointerdown', function (ev) {
+        ensureAudio();
+        slideActive = true;
+        touchSlideTrack.setPointerCapture(ev.pointerId);
+        handleSlideTrackPointer(ev);
+      });
+      touchSlideTrack.addEventListener('pointermove', handleSlideTrackPointer);
+      touchSlideTrack.addEventListener('pointerup', function () { slideActive = false; });
+      touchSlideTrack.addEventListener('pointercancel', function () { slideActive = false; });
+
+      // Keyboard Controls
+      window.addEventListener('keydown', function (ev) {
+        if (document.activeElement === playerNameInput || document.activeElement === document.getElementById('importJsonInput')) {
+          return;
+        }
+        if (ev.key === 'p' || ev.key === 'P' || ev.key === 'Escape') {
+          ev.preventDefault();
+          togglePause();
+          return;
+        }
+        if (isPaused || isGameOver) return;
+
+        switch (ev.key) {
+          case 'ArrowLeft':
+          case 'a':
+          case 'A':
+            ev.preventDefault();
+            moveHorizontal(-1);
+            break;
+          case 'ArrowRight':
+          case 'd':
+          case 'D':
+            ev.preventDefault();
+            moveHorizontal(1);
+            break;
+          case 'ArrowUp':
+          case 'w':
+          case 'W':
+          case 'x':
+          case 'X':
+            ev.preventDefault();
+            rotateActivePiece();
+            break;
+          case 'ArrowDown':
+          case 's':
+          case 'S':
+            ev.preventDefault();
+            stepGravity(true);
+            drawAll();
+            break;
+          case ' ':
+            ev.preventDefault();
+            hardDrop();
+            break;
+          case 'c':
+          case 'C':
+          case 'Shift':
+            ev.preventDefault();
+            holdCurrentPiece();
+            break;
+          case 'g':
+          case 'G':
+          case 'f':
+          case 'F':
+            ev.preventDefault();
+            performGravityFlip(true);
+            break;
+        }
+      });
+
+      // --- 10. UI Buttons, Mode Switching & Modals ---
+      document.querySelectorAll('.mode-tab-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          ensureAudio();
+          const chosen = btn.getAttribute('data-mode');
+          if (chosen && chosen !== gameMode) {
+            startNewGame(chosen);
+          }
+        });
+      });
+
+      document.getElementById('btnPauseToggle').addEventListener('click', function () {
+        ensureAudio();
+        togglePause();
+      });
+
+      document.getElementById('btnToggleMute').addEventListener('click', function () {
+        isMuted = !isMuted;
+        document.getElementById('muteIcon').textContent = isMuted ? '🔇' : '🔊';
+        if (!isMuted) ensureAudio();
+      });
+
+      btnOverlayPrimary.addEventListener('click', function () {
+        ensureAudio();
+        if (isGameOver) {
+          startNewGame();
+        } else {
+          togglePause();
+        }
+      });
+
+      document.getElementById('btnOverlayRestart').addEventListener('click', function () {
+        ensureAudio();
+        startNewGame();
+      });
+
+      document.getElementById('btnSaveScore').addEventListener('click', function () {
+        if (currentRunSaved || score <= 0) return;
+        const name = playerNameInput.value || 'PLAYER 1';
+        recordHighScore(name, score, lines, level, shiftsCount, gameMode);
+        currentRunSaved = true;
+        scoreSavedConfirm.classList.remove('hidden');
+        document.getElementById('btnSaveScore').disabled = true;
+        document.getElementById('btnSaveScore').textContent = 'Saved';
+      });
+
+      // High Scores Modal Logic
+      const scoresModal = document.getElementById('scoresModal');
+      let currentScoreFilter = 'all';
+
+      function renderLeaderboard() {
+        document.getElementById('statGamesPlayed').textContent = String(memoryStore.stats.gamesPlayed || 0);
+        document.getElementById('statAllTimeBest').textContent = (memoryStore.stats.allTimeBest || 0).toLocaleString();
+        document.getElementById('statTotalLines').textContent = String(memoryStore.stats.totalLines || 0);
+        document.getElementById('statTotalShifts').textContent = String(memoryStore.stats.totalShifts || 0);
+
+        const list = memoryStore.highScores.filter(function (item) {
+          return currentScoreFilter === 'all' || item.mode === currentScoreFilter;
+        });
+
+        const container = document.getElementById('leaderboardContainer');
+        if (list.length === 0) {
+          container.innerHTML = '<div class="text-center py-8 text-xs text-slate-500">No saved scores for this mode yet. Play a round to set the record!</div>';
+          return;
+        }
+
+        const modeBadges = {
+          flux: '<span class="px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 text-[10px]">Flux</span>',
+          surge: '<span class="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 text-[10px]">Avalanche</span>',
+          tactical: '<span class="px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300 text-[10px]">Tactical</span>'
+        };
+
+        container.innerHTML = list.slice(0, 12).map(function (entry, idx) {
+          const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '#' + (idx + 1);
+          return `
+            <div class="flex items-center justify-between bg-slate-950/80 border border-slate-800/80 rounded-xl px-3 py-2 text-xs">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="font-mono-num font-extrabold text-slate-400 w-6">${medal}</span>
+                <div class="truncate">
+                  <div class="font-bold text-white flex items-center gap-1.5">
+                    <span>${entry.name}</span>
+                    ${modeBadges[entry.mode] || ''}
+                  </div>
+                  <div class="text-[10px] text-slate-400">
+                    ${entry.lines} lines • Lvl ${entry.level} • ${entry.shifts || 0} flips
+                  </div>
+                </div>
+              </div>
+              <div class="text-right shrink-0">
+                <div class="font-mono-num font-extrabold text-amber-300 text-sm">${Number(entry.score).toLocaleString()}</div>
+                <div class="text-[9px] text-slate-500">${entry.date || ''}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('btnOpenScores').addEventListener('click', function () {
+        if (!isPaused && !isGameOver) {
+          togglePause();
+        }
+        renderLeaderboard();
+        scoresModal.classList.remove('hidden');
+      });
+
+      document.getElementById('btnCloseScores').addEventListener('click', function () {
+        scoresModal.classList.add('hidden');
+      });
+
+      document.querySelectorAll('.score-filter-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          currentScoreFilter = btn.getAttribute('data-filter') || 'all';
+          document.querySelectorAll('.score-filter-btn').forEach(function (b) {
+            if (b.getAttribute('data-filter') === currentScoreFilter) {
+              b.className = 'score-filter-btn px-2.5 py-1 rounded-lg font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40';
+            } else {
+              b.className = 'score-filter-btn px-2.5 py-1 rounded-lg font-semibold text-slate-400 hover:text-white';
+            }
+          });
+          renderLeaderboard();
+        });
+      });
+
+      function showModalFeedback(msg) {
+        const el = document.getElementById('modalFeedbackMsg');
+        el.textContent = msg;
+        el.classList.remove('hidden');
+        setTimeout(function () { el.classList.add('hidden'); }, 2800);
+      }
+
+      document.getElementById('btnExportScores').addEventListener('click', function () {
+        const jsonStr = JSON.stringify(memoryStore);
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(jsonStr).then(function () {
+              showModalFeedback('✓ High scores JSON copied to clipboard!');
+            }).catch(function () {
+              fallbackCopy(jsonStr);
+            });
+          } else {
+            fallbackCopy(jsonStr);
+          }
+        } catch (e) {
+          fallbackCopy(jsonStr);
+        }
+      });
+
+      function fallbackCopy(text) {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          showModalFeedback('✓ High scores JSON copied to clipboard!');
+        } catch (e) {
+          showModalFeedback('Copy ready in Restore box.');
+        }
+      }
+
+      document.getElementById('btnToggleImport').addEventListener('click', function () {
+        const box = document.getElementById('importScoresBox');
+        box.classList.toggle('hidden');
+        box.classList.toggle('flex');
+      });
+
+      document.getElementById('btnCancelImport').addEventListener('click', function () {
+        const box = document.getElementById('importScoresBox');
+        box.classList.add('hidden');
+        box.classList.remove('flex');
+      });
+
+      document.getElementById('btnConfirmImport').addEventListener('click', function () {
+        const raw = document.getElementById('importJsonInput').value.trim();
+        if (!raw) return;
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.highScores)) {
+            memoryStore = parsed;
+            saveToDevice();
+            updateBestScoreUI();
+            renderLeaderboard();
+            document.getElementById('importScoresBox').classList.add('hidden');
+            document.getElementById('importScoresBox').classList.remove('flex');
+            showModalFeedback('✓ Restored high scores to device!');
+          } else {
+            showModalFeedback('Invalid backup format.');
+          }
+        } catch (e) {
+          showModalFeedback('Could not parse JSON backup.');
+        }
+      });
+
+      document.getElementById('btnAskClearScores').addEventListener('click', function () {
+        const box = document.getElementById('confirmResetBox');
+        box.classList.remove('hidden');
+        box.classList.add('flex');
+      });
+
+      document.getElementById('btnCancelReset').addEventListener('click', function () {
+        const box = document.getElementById('confirmResetBox');
+        box.classList.add('hidden');
+        box.classList.remove('flex');
+      });
+
+      document.getElementById('btnConfirmReset').addEventListener('click', function () {
+        memoryStore.highScores = [];
+        memoryStore.stats = { gamesPlayed: 0, allTimeBest: 0, totalLines: 0, totalShifts: 0 };
+        saveToDevice();
+        updateBestScoreUI();
+        renderLeaderboard();
+        const box = document.getElementById('confirmResetBox');
+        box.classList.add('hidden');
+        box.classList.remove('flex');
+        showModalFeedback('✓ Device scores cleared.');
+      });
+
+      // Install Modal Logic
+      const installModal = document.getElementById('installModal');
+      document.getElementById('btnOpenInstall').addEventListener('click', function () {
+        if (!isPaused && !isGameOver) {
+          togglePause();
+        }
+        installModal.classList.remove('hidden');
+      });
+      document.getElementById('btnCloseInstall').addEventListener('click', function () {
+        installModal.classList.add('hidden');
+      });
+      document.getElementById('btnDoneInstall').addEventListener('click', function () {
+        installModal.classList.add('hidden');
+      });
+
+      // --- 11. Boot on Window Load ---
+      window.onload = function () {
+        loadFromDevice();
+        startNewGame('flux');
+        if (animFrameId) cancelAnimationFrame(animFrameId);
+        animFrameId = window.requestAnimationFrame(gameLoop);
+      };
+
+      window.addEventListener('resize', function () {
+        updateSlideThumbPosition();
+        drawAll();
+      });
+    })();
+  </script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js').catch(function() {});
+  });
+}
+</script>
+</body>
+</html>
